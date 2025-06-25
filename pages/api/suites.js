@@ -31,51 +31,39 @@ export default async function handler(req, res) {
       return `${month} ${year}`;
     }
 
-// Function to find row for specific date in a sheet
-async function findRowForDate(sheet, targetDate) {
-  await sheet.loadCells();
-  
-  const targetDay = targetDate.getDate();
-  const targetMonth = targetDate.getMonth();
-  const targetYear = targetDate.getFullYear();
-
-  // Search through rows starting from row 6 to find matching date
-  for (let row = 6; row <= 100; row++) {
-    try {
-      const dateCell = sheet.getCell(row - 1, 11); // Column L (index 11)
+    // Function to find row for specific date in a sheet (DEBUG VERSION)
+    async function findRowForDate(sheet, targetDate) {
+      await sheet.loadCells();
       
-      if (dateCell && dateCell.value) {
-        // Try multiple date parsing methods
-        let cellDate;
-        
-        // Method 1: If it's already a Date object
-        if (dateCell.value instanceof Date) {
-          cellDate = dateCell.value;
-        }
-        // Method 2: If it's a number (day), construct date from current month/year context
-        else if (typeof dateCell.value === 'number') {
-          cellDate = new Date(targetYear, targetMonth, dateCell.value);
-        }
-        // Method 3: If it's a string, try to parse it
-        else if (typeof dateCell.value === 'string') {
-          cellDate = new Date(dateCell.value);
-        }
-        
-        // Check if we found a match
-        if (cellDate && 
-            cellDate.getDate() === targetDay && 
-            cellDate.getMonth() === targetMonth && 
-            cellDate.getFullYear() === targetYear) {
-          return row;
+      const targetDay = targetDate.getDate(); // 25
+      const targetMonth = targetDate.getMonth(); // 5 (juni = maand 5)
+      const targetYear = targetDate.getFullYear(); // 2025
+
+      console.log(`Looking for: Day=${targetDay}, Month=${targetMonth}, Year=${targetYear}`);
+
+      // Search through rows starting from row 6 to find matching date
+      for (let row = 6; row <= 50; row++) {
+        try {
+          const dateCell = sheet.getCell(row - 1, 11); // Column L (index 11)
+          
+          if (dateCell && dateCell.value !== null && dateCell.value !== undefined) {
+            console.log(`Row ${row}: Cell value = "${dateCell.value}", Type = ${typeof dateCell.value}`);
+            
+            // If it looks like the day number we're looking for
+            if (dateCell.value === targetDay || dateCell.value === targetDay.toString()) {
+              console.log(`Found potential match at row ${row}!`);
+              return row;
+            }
+          }
+        } catch (error) {
+          // Skip invalid cells
+          continue;
         }
       }
-    } catch (error) {
-      // Skip invalid cells
-      continue;
+      
+      console.log('No match found');
+      return null;
     }
-  }
-  return null;
-}
 
     // Function to get suites data for a specific date
     async function getSuitesDataForDate(targetDate) {
