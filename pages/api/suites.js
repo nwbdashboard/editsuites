@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return `${month} ${year}`;
     }
 
-    // Function to find row for specific date in a sheet (DEBUG VERSION)
+    // Function to find row for specific date in a sheet (DEBUG IN RESPONSE)
     async function findRowForDate(sheet, targetDate) {
       await sheet.loadCells();
       
@@ -39,7 +39,8 @@ export default async function handler(req, res) {
       const targetMonth = targetDate.getMonth(); // 5 (juni = maand 5)
       const targetYear = targetDate.getFullYear(); // 2025
 
-      console.log(`Looking for: Day=${targetDay}, Month=${targetMonth}, Year=${targetYear}`);
+      let debugInfo = [];
+      debugInfo.push(`Looking for: Day=${targetDay}, Month=${targetMonth}, Year=${targetYear}`);
 
       // Search through rows starting from row 6 to find matching date
       for (let row = 6; row <= 50; row++) {
@@ -47,22 +48,24 @@ export default async function handler(req, res) {
           const dateCell = sheet.getCell(row - 1, 11); // Column L (index 11)
           
           if (dateCell && dateCell.value !== null && dateCell.value !== undefined) {
-            console.log(`Row ${row}: Cell value = "${dateCell.value}", Type = ${typeof dateCell.value}`);
+            debugInfo.push(`Row ${row}: Cell value = "${dateCell.value}", Type = ${typeof dateCell.value}`);
             
             // If it looks like the day number we're looking for
             if (dateCell.value === targetDay || dateCell.value === targetDay.toString()) {
-              console.log(`Found potential match at row ${row}!`);
-              return row;
+              debugInfo.push(`Found potential match at row ${row}!`);
+              // Return both row and debug info
+              return { row: row, debug: debugInfo };
             }
           }
         } catch (error) {
-          // Skip invalid cells
+          debugInfo.push(`Row ${row}: Error reading cell`);
           continue;
         }
       }
       
-      console.log('No match found');
-      return null;
+      debugInfo.push('No match found');
+      // Return debug info even if no match
+      throw new Error(`Debug info: ${debugInfo.join(' | ')}`);
     }
 
     // Function to get suites data for a specific date
@@ -81,10 +84,8 @@ export default async function handler(req, res) {
       }
 
       // Find the row for this specific date
-      const targetRow = await findRowForDate(sheet, targetDate);
-      if (!targetRow) {
-        throw new Error(`Date ${targetDate.toLocaleDateString('nl-NL')} not found in sheet ${sheetName}`);
-      }
+      const result = await findRowForDate(sheet, targetDate);
+      const targetRow = typeof result === 'object' ? result.row : result;
 
       console.log(`Found ${targetDate.toLocaleDateString('nl-NL')} in sheet ${sheetName} at row ${targetRow}`);
 
