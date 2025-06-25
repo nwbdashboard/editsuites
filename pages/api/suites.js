@@ -1,7 +1,7 @@
 // pages/api/suites.js
-// Google Sheets API route with cross-month support
+// Google Sheets API route with cross-month support (v3.3.0 compatible)
 
-import { GoogleSpreadsheet } from 'google-spreadsheet';
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 export default async function handler(req, res) {
   try {
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     // Initialize the sheet
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
 
-    // Initialize Auth
+    // Initialize Auth (v3.3.0 syntax)
     await doc.useServiceAccountAuth({
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
       private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -65,8 +65,13 @@ export default async function handler(req, res) {
       const sheetName = getSheetNameForDate(targetDate);
       
       // Try to get the sheet for the target date
-      let sheet = doc.sheetsByTitle[sheetName];
-      if (!sheet) {
+      let sheet;
+      try {
+        sheet = doc.sheetsByTitle[sheetName];
+        if (!sheet) {
+          throw new Error(`Sheet ${sheetName} not found`);
+        }
+      } catch (error) {
         throw new Error(`Sheet ${sheetName} not found. Planning voor ${targetDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })} nog niet beschikbaar.`);
       }
 
@@ -105,11 +110,20 @@ export default async function handler(req, res) {
         const titleColIndex = columnToIndex(suite.titleCol);
         const editorColIndex = columnToIndex(suite.editorCol);
         
-        const titleCell = sheet.getCell(targetRow - 1, titleColIndex);
-        const editorCell = sheet.getCell(targetRow - 1, editorColIndex);
+        let title = '';
+        let editor = '';
         
-        const title = titleCell ? (titleCell.value || '').toString().trim() : '';
-        const editor = editorCell ? (editorCell.value || '').toString().trim() : '';
+        try {
+          const titleCell = sheet.getCell(targetRow - 1, titleColIndex);
+          const editorCell = sheet.getCell(targetRow - 1, editorColIndex);
+          
+          title = titleCell && titleCell.value ? titleCell.value.toString().trim() : '';
+          editor = editorCell && editorCell.value ? editorCell.value.toString().trim() : '';
+        } catch (error) {
+          // Cell doesn't exist or is empty
+          title = '';
+          editor = '';
+        }
         
         // Clean editor name (remove "- Pilot", "- EM" suffixes)
         let cleanEditor = editor;
