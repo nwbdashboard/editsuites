@@ -172,11 +172,11 @@ export default async function handler(req, res) {
       lastUpdate: new Date().toISOString()
     });
 
-  } catch (error) {
+} catch (error) {
     console.error('Error accessing Google Sheet:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: `NEW DEBUG VERSION: ${error.message}`,
       fallback: true,
       suites: [
         { name: 'EM1', editor: 'Isis', project: 'S & F', progress: 50, status: 'Bezet' },
