@@ -1,5 +1,5 @@
 // pages/api/suites.js
-// Google Sheets API route with debug info in response
+// Google Sheets API route with Excel serial number date parsing
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -31,45 +31,45 @@ export default async function handler(req, res) {
       return `${month} ${year}`;
     }
 
-// Function to find row for specific date in a sheet (FIXED VERSION)
-async function findRowForDate(sheet, targetDate) {
-  await sheet.loadCells();
-  
-  const targetDay = targetDate.getDate();
-  const targetMonth = targetDate.getMonth();
-  const targetYear = targetDate.getFullYear();
-
-  // Convert target date to Excel serial number
-  const excelEpoch = new Date(1900, 0, 1);
-  const targetSerial = Math.floor((targetDate - excelEpoch) / (24 * 60 * 60 * 1000)) + 2;
-
-  let debugInfo = [];
-  debugInfo.push(`Looking for: Day=${targetDay}, Month=${targetMonth}, Year=${targetYear}, Serial=${targetSerial}`);
-
-  // Search through rows starting from row 6 to find matching date
-  for (let row = 6; row <= 50; row++) {
-    try {
-      const dateCell = sheet.getCell(row - 1, 11); // Column L (index 11)
+    // Function to find row for specific date in a sheet (EXCEL SERIAL VERSION)
+    async function findRowForDate(sheet, targetDate) {
+      await sheet.loadCells();
       
-      if (dateCell && dateCell.value !== null && dateCell.value !== undefined) {
-        const cellValue = parseInt(dateCell.value);
-        debugInfo.push(`Row ${row}: Cell value = "${cellValue}"`);
-        
-        // Check if this matches our target serial number
-        if (cellValue === targetSerial) {
-          debugInfo.push(`Found match at row ${row}! Serial ${cellValue} = ${targetDate.toLocaleDateString('nl-NL')}`);
-          return { row: row, debug: debugInfo };
+      const targetDay = targetDate.getDate();
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+
+      // Convert target date to Excel serial number
+      const excelEpoch = new Date(1900, 0, 1);
+      const targetSerial = Math.floor((targetDate - excelEpoch) / (24 * 60 * 60 * 1000)) + 2;
+
+      let debugInfo = [];
+      debugInfo.push(`EXCEL VERSION: Looking for Day=${targetDay}, Month=${targetMonth}, Year=${targetYear}, Serial=${targetSerial}`);
+
+      // Search through rows starting from row 6 to find matching date
+      for (let row = 6; row <= 50; row++) {
+        try {
+          const dateCell = sheet.getCell(row - 1, 11); // Column L (index 11)
+          
+          if (dateCell && dateCell.value !== null && dateCell.value !== undefined) {
+            const cellValue = parseInt(dateCell.value);
+            debugInfo.push(`Row ${row}: Serial=${cellValue}`);
+            
+            // Check if this matches our target serial number
+            if (cellValue === targetSerial) {
+              debugInfo.push(`FOUND MATCH at row ${row}! Serial ${cellValue}`);
+              return { row: row, debug: debugInfo };
+            }
+          }
+        } catch (error) {
+          debugInfo.push(`Row ${row}: Error`);
+          continue;
         }
       }
-    } catch (error) {
-      debugInfo.push(`Row ${row}: Error reading cell`);
-      continue;
+      
+      debugInfo.push(`No match found for serial ${targetSerial}`);
+      throw new Error(`EXCEL DEBUG: ${debugInfo.join(' | ')}`);
     }
-  }
-  
-  debugInfo.push(`No match found for serial ${targetSerial}`);
-  throw new Error(`Debug info: ${debugInfo.join(' | ')}`);
-}
 
     // Function to get suites data for a specific date
     async function getSuitesDataForDate(targetDate) {
